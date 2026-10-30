@@ -1129,6 +1129,23 @@ describe('DeepSeek e2e workflow', () => {
     const step = e2e.steps.filter(isRecord).find(candidate => candidate.name === 'E2E tests (real DeepSeek API)')
     expect(step).toMatchObject({ env: { DSH_E2E_MAX_WORKERS: 6 } })
   })
+
+  it('skips the real-API step when the external key is not configured', () => {
+    const workflow = loadWorkflow('.github/workflows/e2e.yml')
+    const e2e = workflowJob(workflow, 'e2e')
+    if (!Array.isArray(e2e.steps)) throw new TypeError('DeepSeek e2e workflow must define steps')
+
+    const steps = e2e.steps.filter(isRecord)
+    const preflight = steps.find(candidate => candidate.name === 'Preflight (check DEEPSEEK_API_KEY)')
+    const runE2E = steps.find(candidate => candidate.name === 'E2E tests (real DeepSeek API)')
+    if (!isRecord(preflight) || !isRecord(runE2E)) {
+      throw new TypeError('DeepSeek e2e workflow must define key preflight and real-API steps')
+    }
+    expect(preflight.id).toBe('preflight')
+    expect(String(preflight.run)).toContain('run_e2e=false')
+    expect(String(preflight.run)).toContain('run_e2e=true')
+    expect(String(runE2E.if)).toBe("steps.preflight.outputs.run_e2e == 'true'")
+  })
 })
 
 describe('Python release workflows', () => {
